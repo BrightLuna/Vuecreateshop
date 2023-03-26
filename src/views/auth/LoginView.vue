@@ -1,78 +1,124 @@
 <script>
-import { MDBBtn, MDBContainer, MDBInput } from 'mdb-vue-ui-kit';
-    import { ref } from 'vue';
-    
-    export default {
-        components: {
-            MDBContainer,
-            MDBInput,
-            MDBBtn
-        },
-        methods:{
-        checkForm(){
-            // this.$emit("submit",this.form)
-            alert(this.email);
+import useValidate from "@vuelidate/core";
+import { required, minLength, helpers } from "@vuelidate/validators";
+import { MDBBtn, MDBInput } from "mdb-vue-ui-kit";
+
+export default {
+  data() {
+    return {
+      v$: useValidate(),
+      username: "",
+      password: "",
+    };
+  },
+  methods: {
+    async submitForm() {
+      this.v$.$validate(); // checks all inputs
+      console.log(this.v$);
+      if (!this.v$.$error) {
+        // if ANY fail validation
+        const requestOption = {
+            method:"POST",
+            headers:{"Content-Type": "application/json"},
+            body: JSON.stringify({
+                "username": this.username,
+                "password": this.password
+            })
         }
+        await fetch("https://tmsdev.tfnms.com:3000/api/v1/authenticate",requestOption)
+        .then(response=>response.json())
+        .then(res => {
+             
+          
+            console.log(res);
+            if(res.token){
+              
+            window.localStorage.setItem("token",res.token);
+            this.$router.push("/home");
+            }
+        })
+        console.log("Form successfully submitted.");
+      } else {
+        console.log("Form failed validation");
+      }
     },
-
-    setup() {
-        
-        const email = ref('');
-        const password = ref('');
-
-        return {
-            
-            email,
-            password
-        };
+  },
+  validations() {
+    return {
+      username: {
+        required: helpers.withMessage("Please input your name", required),
+      },
+        password: {
+          required: helpers.withMessage("Please input your password", required),
+          minLength: minLength(6),
         }
-    }
+    };
+  },
+  components: { MDBBtn, MDBInput },
+};
 </script>
-
 <template>
-    <MDBContainer>
-        <div class="text-center" style="padding-top: 100px;">
-            <h2 class="p-4">Login</h2>
-            <form class="g-4 needs-validation" novaildate @submit.prevent="checkForm">
-                <div class="p-2">
-                <MDBInput
-                    class="m-4"
-                    label="Please input your Email"
-                    type="email"
-                    size="lg"
-                    v-model="email"
-                    valid-feedback="Looks good"
-                    invalid-feedback="Please provide your email"
-                    validation-event="input"
-                    required
-                    title="Must contain @ characters"
-                    minLength="5"
-                    max-length="30"
-                    />
-                </div>
-                <div class="p-2">
-                    <MDBInput
-                        class="m-4" 
-                        label="Please input your password" 
-                        type="password" 
-                        size="lg"
-                        v-model="password"
-                        valid-feedback="looks good"
-                        invalid-feedback="Please input your password"
-                        validation-event="input"
-                        required
-                        title="Must contain over 5 characters"
-                        minLength="5"
-                        /> 
-                </div>
-            <div class="d-grid col-6 mx-auto m-4">
-                <MDBBtn class="m-2" type="submit" color="success" size="lg" rounded >Login</MDBBtn>
-                </div>
-            </form>
-            <div class="d-grid col-6 mx-auto m-4">
-                <MDBBtn class="m-2" type="submit" color="dark" size="lg" rounded @click="$router.push('/register')" >Register</MDBBtn>
-            </div>
-                       
-        </div>
-    </MDBContainer>
+  <div class="root">
+    <h2>Login</h2>
+    <p>
+      <MDBInput
+        white
+        type="text"
+        v-model="username"
+        class="my-4"
+        :class="{ 'bg-danger' : v$.password.$error}"
+        label="Please input your Username"
+        size="lg"
+        @keyup.enter="submitForm"
+      />
+      <span v-if="v$.username.$error" class="text-danger">{{
+        v$.username.$errors[0].$message
+      }}</span>
+    </p>
+    <p>
+      <MDBInput
+      white
+        type="password"
+        v-model="password"
+        class="my-4"
+        label="Please input your Password"
+        size="lg"
+        :class="{ 'bg-danger' : v$.password.$error}"
+        @keyup.enter="submitForm"
+      />
+      <span v-if="v$.password.$error" class="text-danger">{{
+        v$.password.$errors[0].$message
+      }}</span>
+    </p>
+    <MDBBtn
+      @click="submitForm"
+      class="m-2"
+      type="submit"
+      color="success"
+      size="lg"
+      rounded
+      >Login</MDBBtn
+    >
+    <MDBBtn
+      class="m-2"
+      type="submit"
+      color="dark"
+      size="lg"
+      rounded
+      @click="$router.push('/register')"
+      >Register</MDBBtn
+    >
+  </div>
 </template>
+
+<style lang="css">
+.root {
+  width: 400px;
+  margin: 0 auto;
+  background-color: #565658;
+  color: white;
+  padding: 30px;
+  margin-top: 100px;
+  border-radius: 20px;
+}
+</style>
